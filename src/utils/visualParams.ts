@@ -2,7 +2,7 @@
  * Visual parameter presets and types for FREQUENCY.
  * Controls intensity, bloom, haze, distortion, etc.
  */
-export type ColorPalette = 'toxic' | 'ember' | 'ultraviolet' | 'monochrome'
+export type ColorPalette = 'blue' | 'orange' | 'yellow' | 'purple' | 'green'
 
 export interface VisualParams {
   intensity: number
@@ -10,7 +10,6 @@ export interface VisualParams {
   hazeDensity: number
   distortion: number
   motionSpeed: number
-  grain: number
   palette: ColorPalette
 }
 
@@ -20,13 +19,16 @@ export const DEFAULT_PARAMS: VisualParams = {
   hazeDensity: 0.5,
   distortion: 0.4,
   motionSpeed: 1,
-  grain: 0.2,
-  palette: 'toxic',
+  palette: 'blue',
 }
 
-export const PALETTE_COLORS: Record<ColorPalette, { primary: string; secondary: string; accent: string }> = {
-  toxic: { primary: '#2aff2a', secondary: '#1a4a1a', accent: '#7cff7c' },
-  ember: { primary: '#ff9a6c', secondary: '#4a2512', accent: '#ffb088' },
-  ultraviolet: { primary: '#9d6bff', secondary: '#2a1a4a', accent: '#c49bff' },
-  monochrome: { primary: '#e0e0e0', secondary: '#404040', accent: '#ffffff' },
+export const PALETTE_COLORS: Record<
+  ColorPalette,
+  { primary: string; secondary: string; accent: string }
+> = {
+  blue: { primary: '#2563eb', secondary: '#f97316', accent: '#e2e8f0' },
+  orange: { primary: '#f97316', secondary: '#a855f7', accent: '#0a0a0a' },
+  yellow: { primary: '#facc15', secondary: '#3b82f6', accent: '#ffffff' },
+  purple: { primary: '#a855f7', secondary: '#86efac', accent: '#fbbf24' },
+  green: { primary: '#22c55e', secondary: '#7dd3fc', accent: '#ffffff' },
 }

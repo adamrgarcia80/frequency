@@ -1,19 +1,30 @@
 import { useVisualParams } from '@/hooks/useVisualParams'
 import { PALETTE_COLORS, type ColorPalette } from '@/utils/visualParams'
+import { exportCanvasToPNG } from '@/export/png'
 import styles from './Controls.module.css'
 
 const PALETTES: { id: ColorPalette; label: string }[] = [
-  { id: 'toxic', label: 'Toxic' },
-  { id: 'ember', label: 'Ember' },
-  { id: 'ultraviolet', label: 'Ultraviolet' },
-  { id: 'monochrome', label: 'Monochrome' },
+  { id: 'blue', label: 'Blue' },
+  { id: 'orange', label: 'Orange' },
+  { id: 'yellow', label: 'Yellow' },
+  { id: 'purple', label: 'Purple' },
+  { id: 'green', label: 'Green' },
 ]
 
 export function Controls() {
   const params = useVisualParams()
 
+  const handleExport = () => {
+    const canvas = document.querySelector('[data-frequency-canvas]') as HTMLCanvasElement
+    if (canvas) exportCanvasToPNG(canvas)
+  }
+
   return (
     <div className={styles.controls}>
+      <button className={styles.exportBtn} onClick={handleExport} title="Export current frame as PNG">
+        Export PNG
+      </button>
+
       <h3 className={styles.title}>Visual</h3>
 
       <Slider
@@ -56,14 +67,6 @@ export function Controls() {
         max={2}
         step={0.1}
       />
-      <Slider
-        label="Grain"
-        value={params.grain}
-        onChange={(v) => params.setParam('grain', v)}
-        min={0}
-        max={0.5}
-        step={0.02}
-      />
 
       <div className={styles.paletteRow}>
         <span className={styles.paletteLabel}>Palette</span>
@@ -76,7 +79,7 @@ export function Controls() {
               onClick={() => params.setPalette(id)}
               title={label}
               style={{
-                background: `linear-gradient(135deg, ${PALETTE_COLORS[id].primary}, ${PALETTE_COLORS[id].secondary})`,
+                background: `linear-gradient(135deg, ${PALETTE_COLORS[id].primary} 0%, ${PALETTE_COLORS[id].secondary} 50%, ${PALETTE_COLORS[id].accent} 100%)`,
               }}
             />
           ))}

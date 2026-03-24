@@ -1,6 +1,6 @@
 /**
  * Haze / Pulse Field visual system for FREQUENCY.
- * Atmospheric, signal-distortion, spectral bloom aesthetic.
+ * Lava lamp–style: soft cloudy blobs, hard edges, particle elements.
  * Reacts to bass, mids, highs, loudness, and transients.
  */
 import * as THREE from 'three'
@@ -26,7 +26,6 @@ const FRAGMENT_SHADER = `
   uniform float uHazeDensity;
   uniform float uDistortion;
   uniform float uMotionSpeed;
-  uniform float uGrain;
   uniform float uLow;
   uniform float uMid;
   uniform float uHigh;
@@ -82,49 +81,97 @@ const FRAGMENT_SHADER = `
     return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
   }
 
+  // Voronoi-like cells for hard edges
+  vec2 voronoi(vec2 p) {
+    vec2 n = floor(p);
+    vec2 f = fract(p);
+    float md = 8.0;
+    vec2 mc = vec2(0.0);
+    for (int j = -2; j <= 2; j++) {
+      for (int i = -2; i <= 2; i++) {
+        vec2 g = vec2(float(i), float(j));
+        vec2 off = vec2(
+          snoise(vec3(n + g, uTime * 0.2)),
+          snoise(vec3(n + g + 100.0, uTime * 0.2))
+        );
+        vec2 r = g - f + off;
+        float d = length(r);
+        if (d < md) {
+          md = d;
+          mc = r;
+        }
+      }
+    }
+    return vec2(md, length(mc));
+  }
+
   void main() {
     float t = uTime * uMotionSpeed;
     vec2 uv = vUv - 0.5;
 
-    // Distortion from audio
-    float distort = uDistortion * (uLow * 0.4 + uMid * 0.3 + uHigh * 0.3 + uTransient * 0.5);
-    float n1 = snoise(vec3(uv * 4.0, t * 0.5)) * distort;
-    float n2 = snoise(vec3(uv * 6.0 + 100.0, t * 0.7)) * distort * 0.5;
-    uv += vec2(n1, n2) * 0.08;
+    // Domain warp for organic flow (lava lamp)
+    float distort = uDistortion * (0.3 + uLow * 0.4 + uMid * 0.2 + uHigh * 0.2 + uTransient * 0.5);
+    vec2 warp = vec2(
+      snoise(vec3(uv * 2.5, t * 0.4)) * distort,
+      snoise(vec3(uv * 2.5 + 30.0, t * 0.5 + 1.0)) * distort
+    );
+    uv += warp * 0.15;
 
-    // Radial distance for pulse rings
-    float r = length(uv) * 2.0;
+    float r = length(uv) * 2.2;
 
-    // Haze layers - multiple noise octaves
-    float haze = 0.0;
-    haze += snoise(vec3(uv * 3.0, t * 0.3)) * 0.5;
-    haze += snoise(vec3(uv * 6.0 + 50.0, t * 0.5)) * 0.25;
-    haze += snoise(vec3(uv * 12.0 + 200.0, t * 0.8)) * 0.125;
-    haze = haze * 0.5 + 0.5;
-    haze = pow(haze, 1.0 - uHazeDensity * 0.5);
+    // --- SOFT CLOUDY BLOBS (lava lamp) ---
+    float blob1 = snoise(vec3(uv * 2.0, t * 0.3)) * 0.5 + 0.5;
+    float blob2 = snoise(vec3(uv * 3.5 + 50.0, t * 0.45 + 2.0)) * 0.5 + 0.5;
+    float blob3 = snoise(vec3(uv * 5.0 + 100.0, t * 0.6 + 4.0)) * 0.5 + 0.5;
+    float softBlob = (blob1 * 0.5 + blob2 * 0.35 + blob3 * 0.15);
+    softBlob = smoothstep(0.35, 0.75, softBlob);
+    softBlob *= (0.7 + uEnergy * 0.5 + uLow * 0.3);
 
-    // Pulse rings driven by bass and transients
-    float pulse = sin(r * 8.0 - t * 2.0 - uLow * 4.0) * 0.5 + 0.5;
-    pulse *= exp(-r * 1.5);
-    pulse *= (uLow * 0.7 + uTransient * 0.8 + uEnergy * 0.3);
+    // --- HARD EDGES (voronoi cells) ---
+    vec2 vor = voronoi(uv * 4.0);
+    float cellEdge = 1.0 - smoothstep(0.0, 0.08 + uTransient * 0.04, vor.x);
+    float cellInterior = smoothstep(0.15, 0.4, vor.y);
+    float hardEdge = cellEdge * (0.4 + cellInterior * 0.6);
+    hardEdge *= (0.5 + uMid * 0.4 + uHigh * 0.3);
 
-    // Center bloom
-    float centerGlow = exp(-r * 2.0) * (uEnergy * 0.6 + uMid * 0.4 + uHigh * 0.2);
+    // --- PARTICLE ELEMENTS (twinkling dots) ---
+    vec2 particleUV = uv * 25.0;
+    vec2 pi = floor(particleUV);
+    vec2 pf = fract(particleUV);
+    float particle = 0.0;
+    for (int j = -1; j <= 1; j++) {
+      for (int i = -1; i <= 1; i++) {
+        vec2 cell = pi + vec2(float(i), float(j));
+        float id = snoise(vec3(cell, t * 2.0)) * 0.5 + 0.5;
+        vec2 offset = vec2(snoise(vec3(cell, 0.0)), snoise(vec3(cell + 10.0, 0.0))) * 0.5;
+        vec2 pos = offset + vec2(float(i), float(j)) - pf;
+        float d = length(pos);
+        float size = 0.04 + id * 0.03 + uTransient * 0.02;
+        float bright = (1.0 - smoothstep(0.0, size, d)) * (0.3 + id * 0.7);
+        bright *= (0.5 + sin(t * 3.0 + id * 6.28) * 0.5);
+        particle += bright * (0.6 + uHigh * 0.5 + uEnergy * 0.3);
+      }
+    }
+    particle = min(1.0, particle);
+
+    // --- PULSE RINGS (driven by bass) ---
+    float pulse = sin(r * 6.0 - t * 2.5 - uLow * 5.0) * 0.5 + 0.5;
+    pulse *= exp(-r * 1.2);
+    pulse *= (uLow * 0.8 + uTransient * 0.6 + uEnergy * 0.3);
+
+    // --- CENTER BLOOM ---
+    float centerGlow = exp(-r * 1.8) * (uEnergy * 0.5 + uMid * 0.35 + uHigh * 0.2);
     centerGlow *= uBloom;
 
-    // Combine: dark base + haze + pulse + bloom
-    vec3 col = uSecondary * 0.15;
-    col += uPrimary * haze * uHazeDensity * 0.4 * uIntensity;
-    col += uAccent * pulse * uIntensity * 0.8;
-    col += uPrimary * centerGlow * uIntensity;
+    // --- COMBINE (multi-color palette) ---
+    vec3 col = uSecondary * 0.12;
+    col += uPrimary * softBlob * uHazeDensity * 0.5 * uIntensity;
+    col += uAccent * hardEdge * 0.6 * uIntensity;
+    col += uAccent * particle * 0.9 * uIntensity;
+    col += uPrimary * pulse * uIntensity * 0.7;
+    col += mix(uPrimary, uAccent, 0.5) * centerGlow * uIntensity;
 
-    // Grain
-    float grain = fract(sin(dot(uv + t, vec2(12.9898, 78.233))) * 43758.5453);
-    col += (grain - 0.5) * uGrain;
-
-    // Clamp
     col = clamp(col, 0.0, 1.0);
-
     gl_FragColor = vec4(col, 1.0);
   }
 `
@@ -152,15 +199,14 @@ export class HazePulseField {
       fragmentShader: FRAGMENT_SHADER,
       uniforms: {
         uTime: { value: 0 },
-        uPrimary: { value: new THREE.Color(0.2, 1, 0.2) },
-        uSecondary: { value: new THREE.Color(0.1, 0.3, 0.1) },
-        uAccent: { value: new THREE.Color(0.5, 1, 0.5) },
+        uPrimary: { value: new THREE.Color(0.15, 0.39, 0.92) },
+        uSecondary: { value: new THREE.Color(0.98, 0.45, 0.09) },
+        uAccent: { value: new THREE.Color(0.89, 0.91, 0.94) },
         uIntensity: { value: 0.7 },
         uBloom: { value: 0.6 },
         uHazeDensity: { value: 0.5 },
         uDistortion: { value: 0.4 },
         uMotionSpeed: { value: 1 },
-        uGrain: { value: 0.2 },
         uLow: { value: 0 },
         uMid: { value: 0 },
         uHigh: { value: 0 },
@@ -193,7 +239,6 @@ export class HazePulseField {
     u.uHazeDensity.value = params.hazeDensity
     u.uDistortion.value = params.distortion
     u.uMotionSpeed.value = params.motionSpeed
-    u.uGrain.value = params.grain
 
     u.uLow.value = analysis.lowEnergy
     u.uMid.value = analysis.midEnergy
