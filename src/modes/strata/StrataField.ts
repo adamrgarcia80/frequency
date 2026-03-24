@@ -1,7 +1,7 @@
 /**
- * Mode 02: STRATA — Sculptural, terrain-like, topographic.
- * Central form, layered contour, volumetric haze, restrained motion.
- * Dark cinematic composition, elegant negative space.
+ * Mode 02: STRATA — Sculptural, sparse, cinematic.
+ * Dominant terrain/relief form, volumetric haze, restrained movement.
+ * Image-first: still frames are export-worthy campaign art.
  */
 import * as THREE from 'three'
 import type { AudioAnalysis } from '@/audio/types'
@@ -29,7 +29,6 @@ const FRAGMENT_SHADER = `
   uniform float uGrain;
   uniform float uLow;
   uniform float uMid;
-  uniform float uHigh;
   uniform float uEnergy;
   uniform float uTransient;
   varying vec2 vUv;
@@ -82,54 +81,75 @@ const FRAGMENT_SHADER = `
   }
 
   void main() {
-    float t = uTime * (0.3 + uDrift * 0.4);
+    // Restrained time - barely perceptible movement
+    float t = uTime * (0.08 + uDrift * 0.12);
     vec2 uv = vUv - 0.5;
 
-    // Restrained drift
+    // Very subtle domain warp - breath, not wobble
     vec2 warp = vec2(
-      snoise(vec3(uv * 1.5, t)) * uDrift * 0.08,
-      snoise(vec3(uv * 1.5 + 20.0, t + 1.0)) * uDrift * 0.08
+      snoise(vec3(uv * 0.8, t)) * uDrift * 0.03,
+      snoise(vec3(uv * 0.8 + 20.0, t + 2.0)) * uDrift * 0.03
     );
     uv += warp;
 
-    float r = length(uv) * 2.5;
+    float r = length(uv) * 2.2;
 
-    // Central sculptural form - layered contour / relief
-    float height = 0.0;
-    height += snoise(vec3(uv * 3.0, t * 0.2)) * 0.5;
-    height += snoise(vec3(uv * 6.0 + 50.0, t * 0.3)) * 0.25;
-    height += snoise(vec3(uv * 12.0 + 100.0, t * 0.4)) * 0.125;
+    // --- DOMINANT SCULPTURAL FORM ---
+    // Single central terrain mass - radial falloff creates one focal formation
+    float radialFalloff = exp(-r * 1.2);
+    radialFalloff = smoothstep(0.15, 0.7, radialFalloff);
+
+    // Layered height field - organic, mineral
+    float height = snoise(vec3(uv * 2.2, t * 0.15)) * 0.5;
+    height += snoise(vec3(uv * 4.5 + 33.0, t * 0.2)) * 0.25;
+    height += snoise(vec3(uv * 9.0 + 77.0, t * 0.25)) * 0.125;
     height = height * 0.5 + 0.5;
 
-    // Audio-driven deformation
-    float audioDeform = uLow * 0.5 + uMid * 0.3 + uTransient * 0.6;
-    height += snoise(vec3(uv * 2.0, t + uEnergy * 2.0)) * audioDeform * uRelief;
+    // Gentle audio influence - depth/breath, not distortion
+    float audioBreath = 0.02 + uLow * 0.03 + uEnergy * 0.02 + uTransient * 0.02;
+    height += snoise(vec3(uv * 1.5, t + uEnergy * 0.5)) * audioBreath * uRelief;
 
-    // Contour bands (topographic)
-    float contourFreq = 12.0 + uDensity * 8.0;
-    float contour = sin(height * contourFreq - t * 0.5) * 0.5 + 0.5;
-    contour = pow(contour, 2.0 - uErosion);
+    // Combine: one dominant form
+    float form = height * radialFalloff;
 
-    // Erosion / mineral texture
-    float erosion = snoise(vec3(uv * 20.0, t * 0.5)) * 0.5 + 0.5;
-    contour *= (1.0 - erosion * uErosion * 0.5);
+    // --- TOPOGRAPHIC CONTOUR LINES ---
+    float contourFreq = 14.0 + uDensity * 10.0;
+    float contour = sin(form * contourFreq - t * 0.2) * 0.5 + 0.5;
+    contour = pow(contour, 2.2 - uErosion);
+    contour *= radialFalloff;
 
-    // Volumetric haze
-    float haze = exp(-r * 1.5) * (0.3 + height * 0.5);
-    haze += snoise(vec3(uv * 2.0, t * 0.15)) * 0.5 + 0.5;
-    haze *= uDensity * (0.4 + uEnergy * 0.3);
+    // Mineral erosion - subtle texture, not noisy
+    float mineral = snoise(vec3(uv * 15.0, t * 0.1)) * 0.5 + 0.5;
+    contour *= (1.0 - mineral * uErosion * 0.3);
 
-    // Center bloom
-    float centerGlow = exp(-r * 2.0) * (0.2 + uEnergy * 0.4 + uMid * 0.3);
-    centerGlow *= uBloom;
+    // --- VOLUMETRIC HAZE ---
+    float hazeCore = exp(-r * 1.0) * (0.4 + form * 0.3);
+    float hazeLayer = snoise(vec3(uv * 1.2, t * 0.08)) * 0.5 + 0.5;
+    float haze = hazeCore * (0.5 + hazeLayer * 0.5);
+    haze *= uDensity * 0.6;
 
-    // Dark base, sparse composition
-    vec3 col = uSecondary * 0.08;
-    col += uPrimary * contour * uRelief * 0.6;
-    col += mix(uPrimary, uAccent, 0.3) * haze;
-    col += uAccent * centerGlow * 0.8;
+    // --- SOFT BLOOM (center glow) ---
+    float bloom = exp(-r * 2.5) * (0.15 + uEnergy * 0.2 + uMid * 0.1);
+    bloom *= uBloom;
 
-    // Grain
+    // --- COMPOSITION ---
+    // Deep black base, generous negative space
+    vec3 col = uSecondary * 0.04;
+
+    // Terrain - primary color, sculptural
+    col += uPrimary * contour * uRelief * 0.5;
+
+    // Haze - atmospheric, smoke-like
+    col += mix(uPrimary, uAccent, 0.4) * haze;
+
+    // Accent bloom - subtle highlight
+    col += uAccent * bloom * 0.6;
+
+    // Cinematic vignette - darken edges
+    float vignette = 1.0 - smoothstep(0.5, 1.2, r);
+    col *= (0.7 + vignette * 0.3);
+
+    // Film grain - subtle, premium
     float grain = fract(sin(dot(uv + t, vec2(12.9898, 78.233))) * 43758.5453);
     col += (grain - 0.5) * uGrain;
 
@@ -157,17 +177,16 @@ export class StrataField {
       uniforms: {
         uTime: { value: 0 },
         uPrimary: { value: new THREE.Color(0.13, 0.76, 0.37) },
-        uSecondary: { value: new THREE.Color(0.05, 0.05, 0.06) },
+        uSecondary: { value: new THREE.Color(0.02, 0.02, 0.025) },
         uAccent: { value: new THREE.Color(0.89, 0.91, 0.94) },
-        uDensity: { value: 0.6 },
+        uDensity: { value: 0.5 },
         uRelief: { value: 0.7 },
-        uDrift: { value: 0.4 },
-        uErosion: { value: 0.5 },
-        uBloom: { value: 0.5 },
-        uGrain: { value: 0.15 },
+        uDrift: { value: 0.3 },
+        uErosion: { value: 0.4 },
+        uBloom: { value: 0.4 },
+        uGrain: { value: 0.08 },
         uLow: { value: 0 },
         uMid: { value: 0 },
-        uHigh: { value: 0 },
         uEnergy: { value: 0 },
         uTransient: { value: 0 },
       },
@@ -201,7 +220,6 @@ export class StrataField {
 
     u.uLow.value = analysis.lowEnergy
     u.uMid.value = analysis.midEnergy
-    u.uHigh.value = analysis.highEnergy
     u.uEnergy.value = analysis.smoothedEnergy
     u.uTransient.value = analysis.transient
 

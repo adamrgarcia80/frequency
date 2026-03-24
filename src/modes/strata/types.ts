@@ -11,11 +11,11 @@ export interface StrataParams {
 }
 
 export const DEFAULT_STRATA_PARAMS: StrataParams = {
-  density: 0.6,
+  density: 0.5,
   relief: 0.7,
-  drift: 0.4,
-  erosion: 0.5,
-  bloom: 0.5,
-  grain: 0.15,
+  drift: 0.3,
+  erosion: 0.4,
+  bloom: 0.4,
+  grain: 0.08,
   palette: 'acid',
 }
