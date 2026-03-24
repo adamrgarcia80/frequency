@@ -1,7 +1,7 @@
 /**
- * Haze / Pulse Field visual system for FREQUENCY.
- * Lava lamp–style: soft cloudy blobs, hard edges, particle elements.
- * Reacts to bass, mids, highs, loudness, and transients.
+ * Morphing camouflage visual for FREQUENCY.
+ * Gradient-icon aesthetic: vibrant flowing patches, hard edges, camo patterns.
+ * Strong audio reactivity. No standalone particles.
  */
 import * as THREE from 'three'
 import type { AudioAnalysis } from '@/audio/types'
@@ -33,7 +33,6 @@ const FRAGMENT_SHADER = `
   uniform float uTransient;
   varying vec2 vUv;
 
-  // Simplex-like noise
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -81,97 +80,119 @@ const FRAGMENT_SHADER = `
     return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
   }
 
-  // Voronoi-like cells for hard edges
-  vec2 voronoi(vec2 p) {
+  // Camo patches - irregular shapes with hard edges
+  float camoPatch(vec2 p, float seed) {
     vec2 n = floor(p);
     vec2 f = fract(p);
-    float md = 8.0;
-    vec2 mc = vec2(0.0);
+    float md = 10.0;
     for (int j = -2; j <= 2; j++) {
       for (int i = -2; i <= 2; i++) {
         vec2 g = vec2(float(i), float(j));
-        vec2 off = vec2(
-          snoise(vec3(n + g, uTime * 0.2)),
-          snoise(vec3(n + g + 100.0, uTime * 0.2))
-        );
-        vec2 r = g - f + off;
+        vec2 r = g - f + vec2(
+          snoise(vec3(n + g + seed, uTime * 0.3)),
+          snoise(vec3(n + g + seed + 50.0, uTime * 0.35))
+        ) * 0.5;
         float d = length(r);
-        if (d < md) {
-          md = d;
-          mc = r;
-        }
+        md = min(md, d);
       }
     }
-    return vec2(md, length(mc));
+    return 1.0 - smoothstep(0.15, 0.25, md);
   }
 
   void main() {
     float t = uTime * uMotionSpeed;
     vec2 uv = vUv - 0.5;
 
-    // Domain warp for organic flow (lava lamp)
-    float distort = uDistortion * (0.3 + uLow * 0.4 + uMid * 0.2 + uHigh * 0.2 + uTransient * 0.5);
+    // Strong audio-driven domain warp
+    float audioBoost = 1.5 + uLow * 2.0 + uMid * 1.5 + uHigh * 1.2 + uTransient * 2.5;
+    float distort = uDistortion * 0.25 * audioBoost;
     vec2 warp = vec2(
-      snoise(vec3(uv * 2.5, t * 0.4)) * distort,
-      snoise(vec3(uv * 2.5 + 30.0, t * 0.5 + 1.0)) * distort
+      snoise(vec3(uv * 3.0, t * 0.6)) * distort,
+      snoise(vec3(uv * 3.0 + 40.0, t * 0.7 + 1.5)) * distort
     );
-    uv += warp * 0.15;
+    uv += warp;
 
-    float r = length(uv) * 2.2;
+    float r = length(uv) * 2.0;
 
-    // --- SOFT CLOUDY BLOBS (lava lamp) ---
-    float blob1 = snoise(vec3(uv * 2.0, t * 0.3)) * 0.5 + 0.5;
-    float blob2 = snoise(vec3(uv * 3.5 + 50.0, t * 0.45 + 2.0)) * 0.5 + 0.5;
-    float blob3 = snoise(vec3(uv * 5.0 + 100.0, t * 0.6 + 4.0)) * 0.5 + 0.5;
-    float softBlob = (blob1 * 0.5 + blob2 * 0.35 + blob3 * 0.15);
-    softBlob = smoothstep(0.35, 0.75, softBlob);
-    softBlob *= (0.7 + uEnergy * 0.5 + uLow * 0.3);
+    // --- GRADIENT-ICON LAYERS (like the palette swatches) ---
+    // Diagonal gradient direction, morphing with audio
+    float angle = t * 0.2 + uLow * 2.0 + uTransient * 1.5;
+    vec2 gradDir = vec2(cos(angle), sin(angle));
+    float grad = dot(uv, gradDir) * 2.5 + snoise(vec3(uv * 2.0, t * 0.5)) * 0.8;
+    grad = grad * 0.5 + 0.5;
 
-    // --- HARD EDGES (voronoi cells) ---
-    vec2 vor = voronoi(uv * 4.0);
-    float cellEdge = 1.0 - smoothstep(0.0, 0.08 + uTransient * 0.04, vor.x);
-    float cellInterior = smoothstep(0.15, 0.4, vor.y);
-    float hardEdge = cellEdge * (0.4 + cellInterior * 0.6);
-    hardEdge *= (0.5 + uMid * 0.4 + uHigh * 0.3);
+    // --- CAMO PATCHES (hard-edged irregular shapes) ---
+    float patch1 = camoPatch(uv * 5.0, 0.0);
+    float patch2 = camoPatch(uv * 7.0 + vec2(20.0, 10.0), 100.0);
+    float patch3 = camoPatch(uv * 4.0 + vec2(-15.0, 25.0), 200.0);
+    float camoMask = max(patch1, max(patch2 * 0.8, patch3 * 0.6));
 
-    // --- PARTICLE ELEMENTS (twinkling dots) ---
-    vec2 particleUV = uv * 25.0;
-    vec2 pi = floor(particleUV);
-    vec2 pf = fract(particleUV);
-    float particle = 0.0;
+    // Hard-edge cell pattern (voronoi)
+    vec2 vp = uv * 6.0;
+    vec2 vn = floor(vp);
+    vec2 vf = fract(vp);
+    float vd = 10.0;
     for (int j = -1; j <= 1; j++) {
       for (int i = -1; i <= 1; i++) {
-        vec2 cell = pi + vec2(float(i), float(j));
-        float id = snoise(vec3(cell, t * 2.0)) * 0.5 + 0.5;
-        vec2 offset = vec2(snoise(vec3(cell, 0.0)), snoise(vec3(cell + 10.0, 0.0))) * 0.5;
-        vec2 pos = offset + vec2(float(i), float(j)) - pf;
-        float d = length(pos);
-        float size = 0.04 + id * 0.03 + uTransient * 0.02;
-        float bright = (1.0 - smoothstep(0.0, size, d)) * (0.3 + id * 0.7);
-        bright *= (0.5 + sin(t * 3.0 + id * 6.28) * 0.5);
-        particle += bright * (0.6 + uHigh * 0.5 + uEnergy * 0.3);
+        vec2 vg = vec2(float(i), float(j));
+        vec2 vo = vec2(
+          snoise(vec3(vn + vg, t * 0.4)),
+          snoise(vec3(vn + vg + 30.0, t * 0.4))
+        );
+        float d = length(vg - vf + vo);
+        vd = min(vd, d);
       }
     }
-    particle = min(1.0, particle);
+    float cellEdge = 1.0 - smoothstep(0.0, 0.06 + uTransient * 0.03, vd);
+    cellEdge *= (0.7 + uMid * 0.8 + uHigh * 0.6);
 
-    // --- PULSE RINGS (driven by bass) ---
-    float pulse = sin(r * 6.0 - t * 2.5 - uLow * 5.0) * 0.5 + 0.5;
-    pulse *= exp(-r * 1.2);
-    pulse *= (uLow * 0.8 + uTransient * 0.6 + uEnergy * 0.3);
+    // --- PULSE RINGS (bass-reactive, brighter) ---
+    float pulse = sin(r * 8.0 - t * 3.0 - uLow * 8.0) * 0.5 + 0.5;
+    pulse *= exp(-r * 0.9);
+    pulse *= (0.8 + uLow * 1.2 + uTransient * 1.0 + uEnergy * 0.6);
 
-    // --- CENTER BLOOM ---
-    float centerGlow = exp(-r * 1.8) * (uEnergy * 0.5 + uMid * 0.35 + uHigh * 0.2);
+    // --- CENTER BLOOM (stronger) ---
+    float centerGlow = exp(-r * 1.2) * (0.4 + uEnergy * 0.8 + uMid * 0.5 + uHigh * 0.4);
     centerGlow *= uBloom;
 
-    // --- COMBINE (multi-color palette) ---
-    vec3 col = uSecondary * 0.12;
-    col += uPrimary * softBlob * uHazeDensity * 0.5 * uIntensity;
-    col += uAccent * hardEdge * 0.6 * uIntensity;
-    col += uAccent * particle * 0.9 * uIntensity;
-    col += uPrimary * pulse * uIntensity * 0.7;
-    col += mix(uPrimary, uAccent, 0.5) * centerGlow * uIntensity;
+    // --- GLOW SPOTS (affect color around them, not standalone) ---
+    vec2 gp = uv * 12.0;
+    vec2 gi = floor(gp);
+    vec2 gf = fract(gp);
+    float glow = 0.0;
+    for (int j = -1; j <= 1; j++) {
+      for (int i = -1; i <= 1; i++) {
+        vec2 gc = gi + vec2(float(i), float(j));
+        float gid = snoise(vec3(gc, t * 1.5)) * 0.5 + 0.5;
+        vec2 go = vec2(snoise(vec3(gc, 0.0)), snoise(vec3(gc + 10.0, 0.0))) * 0.5;
+        float gd = length(gf - go - vec2(float(i), float(j)));
+        float gs = 0.15 + gid * 0.1 + uTransient * 0.05;
+        glow += exp(-gd * 8.0) * (0.3 + gid * 0.5) * (0.6 + uHigh * 0.6);
+      }
+    }
+    glow = min(1.0, glow);
 
+    // --- COMBINE: Gradient-icon colors, vibrant and bright ---
+    vec3 colPrimary = uPrimary * 1.2;
+    vec3 colSecondary = uSecondary * 1.2;
+    vec3 colAccent = uAccent * 1.2;
+
+    // Base: lighter, gradient blend
+    vec3 col = mix(colSecondary * 0.4, colPrimary * 0.5, grad * 0.8 + 0.1);
+
+    // Camo patches overlay (hard-edged color regions)
+    col = mix(col, colPrimary, camoMask * uHazeDensity * (0.6 + uEnergy * 0.6 + uLow * 0.4));
+    col = mix(col, colAccent, cellEdge * 0.7 * (0.6 + uMid * 0.5 + uHigh * 0.4));
+
+    // Glow bleeds color into surroundings
+    col += colAccent * glow * 0.5 * uIntensity;
+    col += colPrimary * pulse * uIntensity * 0.9;
+    col += mix(colPrimary, colAccent, 0.5) * centerGlow * uIntensity * 1.2;
+
+    // Brightness boost
+    col *= (1.2 + uIntensity * 0.5);
     col = clamp(col, 0.0, 1.0);
+
     gl_FragColor = vec4(col, 1.0);
   }
 `

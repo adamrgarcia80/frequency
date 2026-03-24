@@ -26,9 +26,9 @@ export const PALETTE_COLORS: Record<
   ColorPalette,
   { primary: string; secondary: string; accent: string }
 > = {
-  blue: { primary: '#2563eb', secondary: '#f97316', accent: '#e2e8f0' },
-  orange: { primary: '#f97316', secondary: '#a855f7', accent: '#0a0a0a' },
-  yellow: { primary: '#facc15', secondary: '#3b82f6', accent: '#ffffff' },
-  purple: { primary: '#a855f7', secondary: '#86efac', accent: '#fbbf24' },
-  green: { primary: '#22c55e', secondary: '#7dd3fc', accent: '#ffffff' },
+  blue: { primary: '#3b82f6', secondary: '#f97316', accent: '#e2e8f0' },
+  orange: { primary: '#fb923c', secondary: '#a855f7', accent: '#171717' },
+  yellow: { primary: '#fde047', secondary: '#60a5fa', accent: '#ffffff' },
+  purple: { primary: '#c084fc', secondary: '#4ade80', accent: '#fcd34d' },
+  green: { primary: '#34d399', secondary: '#38bdf8', accent: '#ffffff' },
 }

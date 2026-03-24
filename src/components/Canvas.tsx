@@ -36,10 +36,11 @@ export function Canvas({ hasFile }: CanvasProps) {
       antialias: true,
       alpha: false,
       powerPreference: 'high-performance',
+      preserveDrawingBuffer: true,
     })
     renderer.setSize(width, height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setClearColor(0x0a0a0b, 1)
+    renderer.setClearColor(0x18181b, 1)
     renderer.domElement.setAttribute('data-frequency-canvas', 'true')
     container.appendChild(renderer.domElement)
     rendererRef.current = renderer
