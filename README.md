@@ -28,7 +28,7 @@ A web-based creative tool that turns uploaded audio into striking, brand-worthy 
 ### Install & Run
 
 ```bash
-# Clone the repo
+# Clone the repo (replace with your repo URL)
 git clone https://github.com/YOUR_USERNAME/frequency.git
 cd frequency
 
