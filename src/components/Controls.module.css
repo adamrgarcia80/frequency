@@ -1,0 +1,100 @@
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sliderLabel {
+  flex: 0 0 90px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.slider {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg-base);
+  border-radius: 2px;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.slider::-webkit-slider-thumb:hover {
+  background: var(--text-secondary);
+}
+
+.slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: var(--text-muted);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.sliderValue {
+  flex: 0 0 36px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.paletteRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.paletteLabel {
+  flex: 0 0 90px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.paletteSwatches {
+  display: flex;
+  gap: 8px;
+}
+
+.swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.swatch:hover {
+  transform: scale(1.08);
+}
+
+.swatch[data-active="true"] {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 1px var(--bg-base);
+}

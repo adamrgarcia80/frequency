@@ -1,0 +1,26 @@
+.zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  padding: 16px;
+  background: var(--bg-panel);
+  border: 1px dashed var(--border-subtle);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.zone:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(22, 22, 26, 0.8);
+}
+
+.input {
+  display: none;
+}
+
+.label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}

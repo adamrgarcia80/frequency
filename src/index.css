@@ -1,0 +1,46 @@
+/* FREQUENCY — Base styles */
+:root {
+  --bg-base: #0a0a0b;
+  --bg-elevated: #111114;
+  --bg-panel: #16161a;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --text-primary: #f0f0f2;
+  --text-secondary: rgba(240, 240, 242, 0.6);
+  --text-muted: rgba(240, 240, 242, 0.4);
+  --accent: #7cff7c;
+  --accent-warm: #ff9a6c;
+  --accent-uv: #9d6bff;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text-primary);
+  background-color: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
