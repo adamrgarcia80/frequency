@@ -1,12 +1,11 @@
 /**
- * Morphing camouflage visual for FREQUENCY.
- * Gradient-icon aesthetic: vibrant flowing patches, hard edges, camo patterns.
- * Strong audio reactivity. No standalone particles.
+ * Mode 01: SIGNAL — Direct audio-reactive atmospheric visual.
+ * Morphing camo, gradient-icon aesthetic, expressive and immersive.
  */
 import * as THREE from 'three'
 import type { AudioAnalysis } from '@/audio/types'
-import type { VisualParams } from '@/utils/visualParams'
-import { PALETTE_COLORS } from '@/utils/visualParams'
+import type { SignalParams } from './types'
+import { PALETTE_COLORS } from '@/utils/palettes'
 
 const VERTEX_SHADER = `
   varying vec2 vUv;
@@ -80,7 +79,6 @@ const FRAGMENT_SHADER = `
     return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
   }
 
-  // Camo patches - irregular shapes with hard edges
   float camoPatch(vec2 p, float seed) {
     vec2 n = floor(p);
     vec2 f = fract(p);
@@ -103,7 +101,6 @@ const FRAGMENT_SHADER = `
     float t = uTime * uMotionSpeed;
     vec2 uv = vUv - 0.5;
 
-    // Strong audio-driven domain warp
     float audioBoost = 1.5 + uLow * 2.0 + uMid * 1.5 + uHigh * 1.2 + uTransient * 2.5;
     float distort = uDistortion * 0.25 * audioBoost;
     vec2 warp = vec2(
@@ -114,20 +111,16 @@ const FRAGMENT_SHADER = `
 
     float r = length(uv) * 2.0;
 
-    // --- GRADIENT-ICON LAYERS (like the palette swatches) ---
-    // Diagonal gradient direction, morphing with audio
     float angle = t * 0.2 + uLow * 2.0 + uTransient * 1.5;
     vec2 gradDir = vec2(cos(angle), sin(angle));
     float grad = dot(uv, gradDir) * 2.5 + snoise(vec3(uv * 2.0, t * 0.5)) * 0.8;
     grad = grad * 0.5 + 0.5;
 
-    // --- CAMO PATCHES (hard-edged irregular shapes) ---
     float patch1 = camoPatch(uv * 5.0, 0.0);
     float patch2 = camoPatch(uv * 7.0 + vec2(20.0, 10.0), 100.0);
     float patch3 = camoPatch(uv * 4.0 + vec2(-15.0, 25.0), 200.0);
     float camoMask = max(patch1, max(patch2 * 0.8, patch3 * 0.6));
 
-    // Hard-edge cell pattern (voronoi)
     vec2 vp = uv * 6.0;
     vec2 vn = floor(vp);
     vec2 vf = fract(vp);
@@ -146,16 +139,13 @@ const FRAGMENT_SHADER = `
     float cellEdge = 1.0 - smoothstep(0.0, 0.06 + uTransient * 0.03, vd);
     cellEdge *= (0.7 + uMid * 0.8 + uHigh * 0.6);
 
-    // --- PULSE RINGS (bass-reactive, brighter) ---
     float pulse = sin(r * 8.0 - t * 3.0 - uLow * 8.0) * 0.5 + 0.5;
     pulse *= exp(-r * 0.9);
     pulse *= (0.8 + uLow * 1.2 + uTransient * 1.0 + uEnergy * 0.6);
 
-    // --- CENTER BLOOM (stronger) ---
     float centerGlow = exp(-r * 1.2) * (0.4 + uEnergy * 0.8 + uMid * 0.5 + uHigh * 0.4);
     centerGlow *= uBloom;
 
-    // --- GLOW SPOTS (affect color around them, not standalone) ---
     vec2 gp = uv * 12.0;
     vec2 gi = floor(gp);
     vec2 gf = fract(gp);
@@ -166,30 +156,24 @@ const FRAGMENT_SHADER = `
         float gid = snoise(vec3(gc, t * 1.5)) * 0.5 + 0.5;
         vec2 go = vec2(snoise(vec3(gc, 0.0)), snoise(vec3(gc + 10.0, 0.0))) * 0.5;
         float gd = length(gf - go - vec2(float(i), float(j)));
-        float gs = 0.15 + gid * 0.1 + uTransient * 0.05;
         glow += exp(-gd * 8.0) * (0.3 + gid * 0.5) * (0.6 + uHigh * 0.6);
       }
     }
     glow = min(1.0, glow);
 
-    // --- COMBINE: Gradient-icon colors, vibrant and bright ---
     vec3 colPrimary = uPrimary * 1.2;
     vec3 colSecondary = uSecondary * 1.2;
     vec3 colAccent = uAccent * 1.2;
 
-    // Base: lighter, gradient blend
     vec3 col = mix(colSecondary * 0.4, colPrimary * 0.5, grad * 0.8 + 0.1);
 
-    // Camo patches overlay (hard-edged color regions)
     col = mix(col, colPrimary, camoMask * uHazeDensity * (0.6 + uEnergy * 0.6 + uLow * 0.4));
     col = mix(col, colAccent, cellEdge * 0.7 * (0.6 + uMid * 0.5 + uHigh * 0.4));
 
-    // Glow bleeds color into surroundings
     col += colAccent * glow * 0.5 * uIntensity;
     col += colPrimary * pulse * uIntensity * 0.9;
     col += mix(colPrimary, colAccent, 0.5) * centerGlow * uIntensity * 1.2;
 
-    // Brightness boost
     col *= (1.2 + uIntensity * 0.5);
     col = clamp(col, 0.0, 1.0);
 
@@ -197,19 +181,19 @@ const FRAGMENT_SHADER = `
   }
 `
 
-export interface HazePulseFieldConfig {
+export interface SignalFieldConfig {
   width: number
   height: number
 }
 
-export class HazePulseField {
+export class SignalField {
   private scene: THREE.Scene
   private camera: THREE.OrthographicCamera
   private mesh: THREE.Mesh
   private material: THREE.ShaderMaterial
   private startTime: number
 
-  constructor(config: HazePulseFieldConfig) {
+  constructor(config: SignalFieldConfig) {
     this.startTime = performance.now() / 1000
     this.scene = new THREE.Scene()
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
@@ -220,7 +204,7 @@ export class HazePulseField {
       fragmentShader: FRAGMENT_SHADER,
       uniforms: {
         uTime: { value: 0 },
-        uPrimary: { value: new THREE.Color(0.15, 0.39, 0.92) },
+        uPrimary: { value: new THREE.Color(0.13, 0.76, 0.37) },
         uSecondary: { value: new THREE.Color(0.98, 0.45, 0.09) },
         uAccent: { value: new THREE.Color(0.89, 0.91, 0.94) },
         uIntensity: { value: 0.7 },
@@ -250,7 +234,7 @@ export class HazePulseField {
     return this.camera
   }
 
-  update(analysis: AudioAnalysis, params: VisualParams) {
+  update(analysis: AudioAnalysis, params: SignalParams) {
     const t = performance.now() / 1000 - this.startTime
     const u = this.material.uniforms
 

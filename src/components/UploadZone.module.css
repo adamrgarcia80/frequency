@@ -2,11 +2,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 80px;
-  padding: 16px;
+  min-height: 56px;
+  padding: 12px 16px;
   background: var(--bg-panel);
   border: 1px dashed var(--border-subtle);
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
 }

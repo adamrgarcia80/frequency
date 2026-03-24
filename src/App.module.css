@@ -6,41 +6,11 @@
   min-height: 0;
 }
 
-.main {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-}
-
-.sidebar {
-  width: 280px;
-  min-width: 280px;
+.sharedBar {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
+  gap: 8px;
+  padding: 12px 24px;
   background: var(--bg-elevated);
-  border-right: 1px solid var(--border-subtle);
-  overflow-y: auto;
-}
-
-.canvasSection {
-  flex: 1;
-  position: relative;
-  min-width: 0;
-}
-
-@media (max-width: 900px) {
-  .main {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    min-width: unset;
-    flex-direction: row;
-    flex-wrap: wrap;
-    border-right: none;
-    border-bottom: 1px solid var(--border-subtle);
-  }
+  border-bottom: 1px solid var(--border-subtle);
 }
